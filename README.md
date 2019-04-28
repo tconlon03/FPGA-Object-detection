@@ -1,5 +1,6 @@
 # FPGA-Object-detection
 Code from final year project - Design of an FPGA based image processing system.
+
 Based on Zedboard - with Zynq 7020 device.
 Processing is split between Programable Logic - Object detection - and Processing System - Object tracking and decision making. 
 PL object detection pipeline : MOG Foreground Detection --> Morphological operations --> BLOB analysis.
