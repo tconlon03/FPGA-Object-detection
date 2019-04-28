@@ -11,14 +11,14 @@ Matlab was used to model the system to confirm algorithm choices and to test HLS
 
 Tests compare MOG outputs and bounding boxes of identified objects
 
-Code is structured as below:
-  •	MATLAB code 
-    o	Modelling
-    o	Testing
-  •	HLS code
-    o	MOG core
-    o	Metamorphic operations core
-    o	BLOB analysis core
-  •	PS SDK Code
-    o	IP Core setup 
-    o	Tracking and decision making
+Code is structured as below:\
+  •	MATLAB code\ 
+    o	Modelling\
+    o	Testing\
+  •	HLS code\
+    o	MOG core\
+    o	Metamorphic operations core\
+    o	BLOB analysis core\
+  •	PS SDK Code\
+    o	IP Core setup\
+    o	Tracking and decision making\
