@@ -33,7 +33,7 @@ typedef hls::stream< rle_run > RLE_AXI_STREAM;
 /* start is inclusive, end is exclusive  */
 struct rle_line {
 	uint_8 no_runs;
-	rle_run runs[120];
+	rle_run runs[20];
 };
 typedef rle_line rle_line;
 
@@ -55,7 +55,7 @@ struct blob{
 	coord min_x;
 	coord max_y;
 	coord min_y;
-} __attribute__((packed)); //128 bits due to alignment issues
+} __attribute__((packed, alligned(1))); //128 bits due to alignment issues
 
 
 typedef ap_uint<128> blob_port;
@@ -63,6 +63,6 @@ typedef ap_uint<128> blob_port;
 //typedef blob blob;
 
 //function declaration
-void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[50]);
-void identify_update_objects(rle_line &current, rle_line &previous, unsigned char * ob_id, blob * (&objects_ptr)[50]);
+void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[100]);
+void identify_update_objects(rle_line &current, rle_line &previous, unsigned char * ob_id, blob * (&objects_ptr)[100]);
 void create_blob(blob * b, unsigned char * ob_id, rle_run current);

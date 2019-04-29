@@ -17,16 +17,20 @@ void open_and_close(GRAY_AXI_STREAM& INPUT_STREAM, RLE_AXI_STREAM& OUTPUT_STREAM
 	hls::AXIvideo2Mat(INPUT_STREAM, img_in);
 	hls::Window<3, 3, unsigned char> kernel_3;
 	hls::Window<8, 8, unsigned char> kernel_8;
-	hls::Window<20, 20, unsigned char> kernel_25;
+	hls::Window<40, 40, unsigned char> kernel_40;
 	//close
-	hls::Dilate<0,1>(img_in, img_out , kernel_3);
-	hls::Erode<0,1>(img_out, img_out , kernel_3);
+	hls::Dilate<0,1>(img_in, img_out , kernel_8);
+	hls::Erode<0,1>(img_out, img_out , kernel_8);
 	//open
 	hls::Erode<0,1>(img_out, img_out , kernel_3);
 	hls::Dilate<0,1>(img_out, img_out , kernel_3);
 	//close
-	hls::Dilate<0,1>(img_out, img_out , kernel_25);
-	hls::Erode<0,1>(img_out, img_out , kernel_25);
+	for (int i = 0; i < 5; i++){
+		hls::Dilate<0,1>(img_out, img_out , kernel_8);
+	}
+	for (int i = 0; i < 5; i++){
+		hls::Erode<0,1>(img_out, img_out , kernel_8);
+	}
 	hls::Mat2AXIvideo(img_out, OUTPUT_IMG_STREAM);
 	/* encode image in rle */
 	for (int r = 0; r < 240; r++){
@@ -39,6 +43,7 @@ void open_and_close(GRAY_AXI_STREAM& INPUT_STREAM, RLE_AXI_STREAM& OUTPUT_STREAM
 			while(OUTPUT_IMG_STREAM.empty()){}
 			GRAY_PIXEL p;
 			OUTPUT_IMG_STREAM.read(p);
+			//printf("%d", (int)p.data > 0 ? 1 : 0);
 			if (p.data != prev_pixel){
 				if (p.data > 0){
 					start = c;
@@ -59,7 +64,7 @@ void open_and_close(GRAY_AXI_STREAM& INPUT_STREAM, RLE_AXI_STREAM& OUTPUT_STREAM
 				//EDGE CASE WHERE RUN CONTINUES TO END
 				if (run.data.s != start && p.data > 0){
 					run.data.s = start;
-					run.data.e = end;
+					run.data.e = img_out.cols - 1;
 					run.data.no = 0;
 					run.data.y = r;
 				}
@@ -70,6 +75,7 @@ void open_and_close(GRAY_AXI_STREAM& INPUT_STREAM, RLE_AXI_STREAM& OUTPUT_STREAM
 			}
 			prev_pixel = (uint_8) p.data;
 		}
+		//printf("\n");
 	}
 }
 

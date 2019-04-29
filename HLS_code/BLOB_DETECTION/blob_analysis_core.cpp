@@ -13,16 +13,17 @@ using namespace hls;
  * stream_in - input mask from MOG Foreground detection
  * objects - array of bounding boxes and centre points in the image
  */
-void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[50]){
-//#pragma HLS DATA_PACK variable=objects
-//#pragma HLS DATA_PACK variable=rle_stream struct_level
-//#pragma HLS INTERFACE ap_memory port=objects
+void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[100]){
 #pragma HLS INTERFACE s_axilite port=return bundle=CRTL_BUS
 #pragma HLS INTERFACE bram port=objects_port
 #pragma HLS INTERFACE axis port=rle_stream
-	blob * objects_ptr[50];
-	blob objects[50];
-	for (int i=0; i<50; i++){
+	blob * objects_ptr[100];
+	blob objects[100];
+#pragma HLS ARRAY_MAP variable=objects_ptr instance=array1 horizontal
+#pragma HLS ARRAY_MAP variable=objects instance=array1 horizontal
+
+	for (int i=0; i<100; i++){
+#pragma HLS PIPELINE
 		objects[i].id = objects_port[i] & 0xFF;
 		objects[i].cp.x = (objects_port[i] >> 8) & 0x1FF;
 		objects[i].cp.y = (objects_port[i] >> 17) & 0x1FF;
@@ -41,10 +42,14 @@ void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[50]){
 	unsigned char next_ob_id = 1;
 	next_ob_id_p = &next_ob_id;
 	while(!rle_stream.empty()){
+	//for (int l = 0; l < 240; l++){
+		//printf("l : %d", l);
+		while(rle_stream.empty()){};
 		rle_run run;
 		uint_8 run_count = 0;
 		run.data._last_run = 0;
 		while(!run.data._last_run){
+		//for (int r = 0; r < 120; r++){
 			run = rle_stream.read();
 			current.runs[run_count] = run;
 			run_count = run_count + 1;
@@ -55,6 +60,7 @@ void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[50]){
 		} else {
 			//first line is current - mark runs
 			for (int i = 0; i < current.no_runs; i++){
+			//for (int i = 0; i < 120; i++){
 				current.runs[i].data.no = next_ob_id;
 				create_blob(objects_ptr[next_ob_id - 1], next_ob_id_p, current.runs[i]);
 				next_ob_id = next_ob_id + 1;
@@ -63,7 +69,8 @@ void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[50]){
 		previous = current;
 		cur_line = cur_line + 1;
 	}
-	for (int i = 0; i < 50; i++){
+	for (int i = 0; i < 100; i++){
+#pragma HLS PIPELINE
 		unsigned char *start = (unsigned char *)&objects[i];
 		unsigned char *start_port = (unsigned char *)&objects_port[i];
 		for (int j = 0; j < sizeof(blob); j ++){
@@ -80,10 +87,12 @@ void blob_analysis(RLE_AXI_STREAM &rle_stream, blob_port objects_port[50]){
  * previous - check if runs in current match runs in previous
  * 			  to get object id.
  */
-void identify_update_objects(rle_line &current, rle_line &previous, unsigned char * ob_id, blob * (&objects_ptr)[50]){
+void identify_update_objects(rle_line &current, rle_line &previous, unsigned char * ob_id, blob * (&objects_ptr)[100]){
 	for (int i = 0; i < current.no_runs; i++){
+	//for (int i = 0; i < 120; i++){
 		unsigned char match = 0;
 		for (int j = 0; j < previous.no_runs; j++){
+		//for (int j = 0; j < 120; j++){
 			if ((current.runs[i].data.s <= previous.runs[j].data.e &&
 				current.runs[i].data.s >= previous.runs[j].data.s) ||
 				(current.runs[i].data.e <= previous.runs[j].data.e &&
@@ -96,23 +105,25 @@ void identify_update_objects(rle_line &current, rle_line &previous, unsigned cha
 					current.runs[i].data.no = previous.runs[j].data.no;
 					//area
 					char idx = (char)current.runs[i].data.no - 1;
-					blob* b = objects_ptr[idx];
-					b->area = b->area + (current.runs[i].data.e - current.runs[i].data.s);
-					if (current.runs[i].data.e > b->max_x){
-						b->max_x = current.runs[i].data.e;
+					if (idx >= 0 && idx < 100){
+						blob* b = objects_ptr[idx];
+						b->area = b->area + (current.runs[i].data.e - current.runs[i].data.s);
+						if (current.runs[i].data.e > b->max_x){
+							b->max_x = current.runs[i].data.e;
+						}
+						if (current.runs[i].data.s < b->min_x){
+							b->min_x = current.runs[i].data.s;
+						}
+						if (current.runs[i].data.y > b->max_y){
+							b->max_y = current.runs[i].data.y;
+						}
+						coord w = b->max_x - b->min_x;
+						coord h = b->max_y - b->min_y;
+						point centre;
+						centre.x = b->min_x + (w/2);
+						centre.y = b->min_y + (h/2);
+						b->cp = centre;
 					}
-					if (current.runs[i].data.s < b->min_x){
-						b->min_x = current.runs[i].data.s;
-					}
-					if (current.runs[i].data.y > b->max_y){
-						b->max_y = current.runs[i].data.y;
-					}
-					coord w = b->max_x - b->min_x;
-					coord h = b->max_y - b->min_y;
-					point centre;
-					centre.x = b->min_x + (w/2);
-					centre.y = b->min_y + (h/2);
-					b->cp = centre;
 					//bounding box created at end
 				} else if (match > 1) {
 					//check if matched with a new object
@@ -144,7 +155,7 @@ void identify_update_objects(rle_line &current, rle_line &previous, unsigned cha
 		}
 		if (match == 0) {
 			//create a new object
-			if(*ob_id < 50){
+			if(*ob_id < 100){
 				current.runs[i].data.no = *ob_id;
 				create_blob(objects_ptr[*(ob_id) - 1], ob_id, current.runs[i]);
 				*ob_id = *(ob_id) + 1;

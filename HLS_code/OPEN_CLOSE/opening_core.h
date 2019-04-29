@@ -1,8 +1,8 @@
-#include <hls_video.h>
+#include <hls_video.h>
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 
-typedef hls::Mat<240, 320, HLS_8UC1> GRAY_IMAGE;
+typedef hls::Mat<240,320, HLS_8UC1> GRAY_IMAGE;
 typedef ap_axiu<8,1,1,1> GRAY_PIXEL;
 typedef hls::stream< GRAY_PIXEL > GRAY_AXI_STREAM;
 
